@@ -1,0 +1,143 @@
+\documentclass{scrartcl}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsthm, amsmath, amssymb}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\newtheorem{task}{Task}
+\newtheorem{claim}{Claim}
+
+\renewcommand{\qedsymbol}{$\blacksquare$}
+
+\begin{document}
+	\title{Practical Lab - Computational Finance \\ Sheet 2}
+	\author{Min Liu, Christian Fiedler and Tim Griesbach}
+	\date{November XX, 2019}
+	\maketitle
+	
+	\section{Introduction}
+	After we learned how to simulate stock prices that are modeled by a geometric Brownian motion (GBM) on the first sheet, we will learn about certain derivatives that are defined on stock prices and allow bets on many different behaviors of these underlying prices on this sheet. Moreover, we will discuss several approaches to compute expected values for options and finally derive a formula for a \textit{fair price}.
+	
+	\section{Options}
+	An option is the right, but not the obligation to buy (\textit{call option}) or sell (\textit{put option}) a certain amount of an underlying asset for a certain price (the \textit{strike price}) within a certain period of time (the \textit{expiration date}).\par
+	The price of an option derives from the difference between the reference price and the value of the underlying asset (commonly a stock, a bond, a currency or a futures contract) plus a premium based on the time remaining until the expiration of the option. Other types of options exist, and options can in principle be created for any type of valuable asset, like stock indices, currencies, interest rates, etc.\par
+	Usually options are emitted from a bank, which sets the conditions on the strike price, the quantity or the expiration date, until which the buyer can choose to either exercise or lapse the option.\par 
+	If the option is of \textit{European} style it can only be exercised at the expiration date $T$. In contrast, \textit{American options} can be exercised at any time before. Most options traded are of American style, but since they are more difficult to price we will focus on European options for now.\par 
+	So let $V$ be the value of a European option on some underlying asset $S$. The value of $V$ depends on the price of the underlying $S_t$, which varies in time $0\leq t\leq T$, thus we write $V(S,t)$. Let $K$ be the strike price. Then the value of a call option at the expiration date $t=T$ is given by
+	\begin{equation}
+		V_{call}(S, T) = \max\{S_T - K, 0\} = (S_T - K)^+ \text{.}
+	\end{equation}
+	In case of a put option we have
+	\begin{equation}
+		V_{put}(S, T) = \max\{K - S_T, 0\} = (K - S_T)^+ \text{.}
+	\end{equation}
+	These functions $V(S, T)$ are called \textit{payoff functions} and define the value of an option at the expiration date. On later sheets we will learn about more complicated payoff functions, but here we will stick to the simple case of European calls and puts.\par
+	Now the question is: What is a fair value for an option at time $t < T$ or even $t = 0$?
+	
+	\section{Option Pricing by Simulation}
+	On the first sheet we learned how to simulate stock prices, which follow the dynamics of a GBM. It is straightforward to extend this principle of simulation to functions which are defined on these prices.\par 
+	To do so, you simply simulate the path of a geometric Brownian motion (which models the stock price of your underlying) and then apply the payoff function (1) or (2), respectively, to the realization of a path.
+	
+	\begin{task}
+		Simulate $N = 1000$ geometric Brownian paths with parameters $S_0=10$, $\mu = 0.1$, $\sigma = 0.2$, $T = 2$, $\Delta t = 0.2$, apply the payoff function $V_{call}(S,T)$ with Strike $K=10$ to each path and compute the mean of the resulting values.\\
+		Repeat the procedure for different $\sigma = 0.0,0.2,0.4,0.6,0.8$ and plot the mean estimates against the value of $\sigma$.
+	\end{task}
+	
+	If the payoff function only depends on the value of $S_T$ and not on $S_t$,$t < T$, there is a particular feature of the GBM, which allows us to simulate only one single timestep $\Delta t=T$. Validate this by doing the following task.
+	
+	\begin{task}
+		Simulate $N=1000$ geometric Brownian paths with parameters $S_0=10$, $\mu = 0.1$, $\sigma=0.2$, $T=2$, $\Delta t = 0.2$ again, apply $V_{call}(S,T)$ with $K=10$ to each of them and compute the mean and variance. Repeat the procedure for $\Delta t=0.4,1.0,2.0$. Does the variance depend on $\Delta t$? Interpret your results.
+	\end{task}
+
+	\section{Representation as an integral}
+	
+	From the law of large numbers we know that for i.i.d. random variables $x_i \sim \mathcal{N}(0,1)$ almost surely
+	
+	\begin{equation*}
+		\frac{1}{\sqrt{2\pi}}\int_{-\infty}^{\infty} f(s) e^{-\frac{s^2}{2}}\,ds
+		= \lim\limits_{n\rightarrow\infty} \frac{1}{n}\sum_{i=1}^{N}f(x_i)\text{.}
+	\end{equation*}
+	Thus, it is natural to interpret our simulation approach as a discretized integral.
+	
+	\subsection{Closed form solution}
+	
+	Assume that $(S_t)_{t\geq 0}$ is a geometric Brownian motion with parameters $\mu$ and $\sigma$ on the probability space $(\Omega,\mathcal{A},\mathbb{P})$, i.e. it satisfies the stochastic differential equation
+	\begin{equation}
+		dS_t = \mu S_t\,dt + \sigma S_t\,dW_t
+	\end{equation}
+	where $(W_t)_{t\geq 0}$ is a Brownian motion. The solution $(S_t)$ to (3) is explicitly given by
+	\begin{equation}
+		S_t = S_0\exp\left(\left(\mu - \frac{1}{2}\sigma^2\right)t + \sigma W_t\right)\text{.}
+	\end{equation}Our goal is to obtain a closed form solution for the price of a European call option on the underlying $(S_t)$.
+	
+	\begin{task}
+		Prove that the expected value of the European call option with strike $K$ at maturity $T>0$ is given by
+		\begin{equation}
+			\mathbb{E}\left[V_{call}(S, T)\right] = S_0\,e^{\mu T}\,\Phi(\sigma\sqrt{T}-\chi)-K\Phi(-\chi)\text{,}
+		\end{equation}
+		where
+		\begin{equation}
+			\chi = \frac{1}{\sigma\sqrt{T}}\left(\log\left(\frac{K}{S_0}\right) - \left(\mu - \frac{1}{2}\sigma^2\right)\,T\right)
+		\end{equation}
+		and $\Phi(x)=\frac{1}{\sqrt{2\pi}}\int_{-\infty}^{x} e^{-\frac{s^2}{2}}\,ds$ denotes the c.d.f. of $\mathcal{N}(0,1)$.
+	\end{task}
+	\begin{proof}
+		First, we rewrite (1) by using (4) as
+		\begin{equation}
+			V_{call}(S, T) = (S_T - K)^+ \stackrel{(4)}{=} f\left(\frac{1}{\sqrt{T}}W_T\right)
+		\end{equation}
+		where the function $f$ is defined by
+		\begin{equation*}
+		f(x) = \left(S_0\exp\left(\left(\mu - \frac{1}{2}\sigma^2\right)T + \sigma \sqrt{T} x\right) - K\right)^+\text{.}
+		\end{equation*}
+		We note that $f(x)$ is non-negative if and only if
+		\begin{align*}
+			 K &\leq S_0\exp\left(\left(\mu - \frac{1}{2}\sigma^2\right)T + \sigma \sqrt{T} x\right) \\
+			\Leftrightarrow
+			\log\left(\frac{K}{S_0}\right) &\leq \left(\mu - \frac{1}{2}\sigma^2\right)T + \sigma \sqrt{T} x  \\
+			\Leftrightarrow
+			x &\geq \frac{1}{\sigma\sqrt{T}}\left(\log\left(\frac{K}{S_0}\right) - \left(\mu - \frac{1}{2}\sigma^2\right)\,T\right) = \chi\text{.}
+		\end{align*}
+		We know that $W_T\sim\mathcal{N}(0,T)$ and therefore $X = \frac{1}{\sqrt{T}}W_T$ has standard normal distribution. Hence, we can calculate the expectation in (5) by
+		\begin{align*}
+			\mathbb{E}\left[V_{call}(S, T)\right] &\stackrel{(7)}{=} \mathbb{E}\left[f(X)\right] \\
+			&= \frac{1}{\sqrt{2\pi}}\int_{-\infty}^{\infty}f(x) e^{-\frac{x^2}{2}}\,dx \\
+			&= \frac{1}{\sqrt{2\pi}}\int_{\chi}^{\infty} \left(S_0\exp\left(\left(\mu - \frac{1}{2}\sigma^2\right)T + \sigma \sqrt{T} x\right) - K\right)e^{-\frac{x^2}{2}}\,dx \\
+			&= S_0\,e^{\mu T}\frac{1}{\sqrt{2\pi}}\int_{\chi}^{\infty} \exp\bigg(\underbrace{- \frac{1}{2}\sigma^2T + \sigma \sqrt{T} x -\frac{x^2}{2}}_{=-\frac{1}{2}\left(x-\sigma\sqrt{T}\right)^2}\bigg)\,dx - K(1-\Phi(\chi)) \\
+			&= S_0\,e^{\mu T}\frac{1}{\sqrt{2\pi}}\int_{\chi-\sigma\sqrt{T}}^{\infty} e^{-\frac{y^2}{2}}\,dy - K(1-\Phi(\chi)) \\
+			&= S_0\,e^{\mu T}\left(1-\Phi(\chi-\sigma\sqrt{T})\right) - K(1-\Phi(\chi)) \\
+			&= S_0\,e^{\mu T}\,\Phi(\sigma\sqrt{T}-\chi)-K\Phi(-\chi)\text{.}
+		\end{align*}
+		Here we used change-of-variable $y = x - \sigma\sqrt{T}$ and $\Phi(-x) = 1 - \Phi(x)$.
+	\end{proof}
+
+	Now we can use the exact solution (5) to create a convergence plot.
+	
+	\begin{task}
+		Using the parameters $S_0=10$, $K=10$, $\mu = 0.1$, $\sigma=0.2$ and $\Delta t=T=1$ compute an approximation to $\mathbb{E}\left[V_{call}(S, T)\right]$ by simulation, as in tasks 1 and 2 before, i.e. calculate
+		\begin{equation*}
+			\hat{m}_N = \frac{1}{N}\sum_{i=1}^{N}V(S_i, T)
+		\end{equation*}
+		where $S_i$ is the $i$-th simulated path.\\
+		Plot $N$ against the error of $\hat{m}_N$ in double-logarithmic axes with $N = 1, 10, 10^2, 10^3,\dots, 10^6$. Repeat this procedure 5 times and put all 5 plots in the same picture. What can you say about the rate of convergence?
+	\end{task}
+	Even though we know by now that our problem has a closed-form solution (5), we will use it in the following as a \textit{toy problem} to compare and explain several approaches that might also be used for more complicated problems.
+	
+	\subsection{Transformation to the unit interval}
+	At the moment, our integration problem
+	\begin{equation*}
+		\frac{1}{\sqrt{2\pi}}\int_{-\infty}^{\infty} f(s) e^{-\frac{s^2}{2}}\,ds
+	\end{equation*}
+	is defined on the whole real axis $(-\infty, \infty)$ which is an unbounded domain and thus not suited for many popular numerical integration methods. For this reason we use a change-of-variable $s = \Phi^{-1}(t)$, where $\Phi^{-1}:(0,1)\rightarrow(-\infty,\infty)$ is the inverse of the cumulated distribution function $\Phi$ to obtain the following statement:
+	\begin{task}
+		Prove that
+		\begin{equation}
+			\frac{1}{\sqrt{2\pi}}\int_{-\infty}^{\infty} f(s) e^{-\frac{s^2}{2}}\,ds = \int_{0}^{1}f(\Phi^{-1}(t))\,dt\text{.}
+		\end{equation}
+	\end{task}
+	\begin{proof}
+		As mentioned before, we use the change-of-variable $s = \Phi^{-1}(t)$. Then we have $\frac{d}{ds}\Phi(s)=\frac{1}{\sqrt{2\pi}}e^{-\frac{s^2}{2}}$ and .
+	\end{proof}
+\end{document}
